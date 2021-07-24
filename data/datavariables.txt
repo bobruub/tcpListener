@@ -1,0 +1,2 @@
+sequenceNumber;substring;5,7
+eventId;substring;7,10

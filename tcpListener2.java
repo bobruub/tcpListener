@@ -3,7 +3,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import javax.json.*;
 
   public class tcpListener {
       private ServerSocket serverSocket;
@@ -115,25 +114,6 @@ import javax.json.*;
           System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
           e.printStackTrace();
         }
-
-// load the content check descriptor into memory
-        fileName = "./data/contentcheckjson.txt";
-        System.out.println("tcpListener: opening file: " + fileName);
-        String contentCheckType = null;
-        try{
-          BufferedReader br = new BufferedReader(new FileReader(fileName));
-
-          contentCheckType = contentCheckArray[0];
-          contentFirstPos = Integer.parseInt(contentCheckRules[0]);
-          contentLastPos = Integer.parseInt(contentCheckRules[1]);
-          System.out.println("contentCheckType: " + contentCheckType + " - " + contentFirstPos + " - " + contentLastPos);
-          br.close();
-         } catch (Exception e) {
-          System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
-          e.printStackTrace();
-        }
-
-
 
         System.out.println("tcp Listener: opening port on 20001.");
           tcpListener server=new tcpListener();
