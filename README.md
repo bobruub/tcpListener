@@ -14,7 +14,8 @@ tcpStub is a simple general purpose tcp listener which will accept and respond t
 
 ## config.json
 
-```{
+```
+{
 "ListenerVersion": "0.5",
 "socketTimeout": 0,
 "clientTimeout": 0,
@@ -37,7 +38,7 @@ TODO:
 - expand to other options
 - move to config.json
 
-##requestresponse.txt
+## requestresponse.txt
 
 ```
 DLTBQ;ALTBA%sequenceNumber%%eventId%.....h%randNum%41001402707ITSP05.2501072
@@ -56,7 +57,7 @@ Contains the responses to be sent when a matching contentcheck is found,
 - final response of a logical seqeunce should be duplicated with **endOfStream** which terminates connection. 
  - variables are defined in each line formatted %variableName% and must have a matching value in the **datavariables.txt** file
 
-##datavariables.txt
+## datavariables.txt
 
 ```
 sequenceNumber;substring;5,7
@@ -69,4 +70,8 @@ randNum;randomNumber;0,100,%04d
 Column 2 defines the type of the variable 
 - Substring - extract variable from input line based on rules (column 3): First Pos, LastPos
 - randomNumber - generate a random number based on rules (column 3): Min, Max, Format  
+
+TODO:
+
+- convert to json
 
