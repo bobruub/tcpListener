@@ -1,33 +1,38 @@
+package tcpStub;
+
+import javax.json.JsonObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Random;
+import javax.json.*;
 
 public class tcpWorker implements Runnable {
 
     private final Socket clientSocket;
     private final ArrayList<String> result;
     private final ArrayList<String> dataVariables;
+    private final JsonObject configObject;
     private final int contentFirstPos;
     private final int contentLastPos;
 
     public tcpWorker(Socket clientSocket,
                      int contentFirstPos, int contentLastPos,
-                     ArrayList<String> result, ArrayList<String> dataVariables) {
+                     ArrayList<String> result, ArrayList<String> dataVariables,
+                     JsonObject configObject) {
 
         this.clientSocket = clientSocket;
         this.contentLastPos = contentLastPos;
         this.contentFirstPos = contentFirstPos;
         this.result = result;
         this.dataVariables = dataVariables;
+        this.configObject = configObject;
 
     }
-
     @Override
     public void run() {
-        System.out.println("---------------");
-        System.out.println("Processing Client Request...");
         PrintWriter out = null;
         BufferedReader in = null;
         // create an input and output socket
@@ -38,7 +43,6 @@ public class tcpWorker implements Runnable {
             System.out.println("tcpWorker: error opening socket: " + e);
             System.exit(1);
         }
-
         boolean lineStatus = true;
         int cntr = 0;
         String contentCheck = null;
@@ -48,40 +52,34 @@ public class tcpWorker implements Runnable {
             boolean connectionOpen = true;
             while (connectionOpen) {
                 String inputLine;
-                inputLine = in.readLine();
+                inputLine = in.readLine();                                              // read input line from socket
                 cntr++;
                 System.out.println(cntr + ":" + inputLine);
-                // at this stage need to check the request response array for correct responses to send
-                // extract indentifier from input message
-                contentCheck = inputLine.substring(contentFirstPos, contentLastPos);
-                //System.out.println("contentCheck: " + contentCheck);
-                // loop throught he request response array
+                contentCheck = inputLine.substring(contentFirstPos, contentLastPos);    // extract contentCheck indentifier from input message
+                // at this stage need to check the request response array for correct responses to send based on the contentCheck
                 for (int i = 0; i < result.size(); i++) {
-                    // read and split the current line
+                    // read and split the current line, into a check value [0] and a response message [1]
                     requestResponseLine = result.get(i);
-                    //System.out.println("requestResponseLine: " + requestResponseLine);
                     String[] requestResponseArray = requestResponseLine.split(";");
-                    // if the contentCheck exists in the line then send it out
-                    if (requestResponseLine.contains(contentCheck)) {
-                        // extract the response data from the array
-                        responseData = requestResponseArray[1];
-                        // check if response line has any variables to be processed
-                        if (responseData.contains("%")) {
+                    String checkValue = requestResponseArray[0];
+                    if (contentCheck.equals(checkValue)){                               // if the contentCheck exists in the line then send it out
+//                    if (requestResponseLine.contains(contentCheck)) {
+                        responseData = requestResponseArray[1];                         // extract the response data from the array
+                        if (responseData.contains("%")) {                               // check if response line has any variables to be processed
                             responseData = processVariable(responseData, inputLine);
                         }
-                        // if the contentCheck responseData matches the end of a sequence then close the loop
+                        // if the contentCheck response message matches the end of a sequence then close the loop
+                        // its a hack but only way I can think of to know a sequence of data is complete.
                         if (responseData.equals("endOfStream")) {
                             connectionOpen = false;
                         } else {
-                            // else write the data to open connectionOpen
-                            out.println(responseData);
+                            out.println(responseData);                                  // write the data to open connectionOpen
                             cntr++;
                             System.out.println("\t" + cntr + ":" + responseData);
                         }
                     }
                 }
             }
-
         } catch (Exception e) {
             System.out.println("tcpWorker: error reading input stream: " + e);
         }
@@ -93,27 +91,20 @@ public class tcpWorker implements Runnable {
         } catch (Exception e) {
             System.out.println("tcpWorker: error closing resources: " + e);
         }
-
-
     }
-
     String processVariable(String responseData, String inputLine) {
         String dataVariableDetails = null;
         String subStringValue = null;
-        // extract the variablename from the inptut streem %varname%
+        // extract the variablename from the inptut stream %varname%
         while (true) {
             int firstPos = responseData.indexOf("%");
             int lastPos = responseData.indexOf("%", firstPos + 1);
-            //System.out.println("--------------------------");
-            //System.out.println("responseData: " + responseData);
-            //System.out.println("firstPos: " + firstPos);
-            //System.out.println("lastPos: " + lastPos);
+            // if indexof finds no more messages then stop processing.
             if (firstPos < 0) {
                 break;
             }
             String variableName = responseData.substring(firstPos + 1, lastPos);
-            //System.out.println("variableName: "  +variableName);
-            // now we've got the variable name, lets loop though varibale array and find out what type it is
+            // now we've got the variable name, lets loop though variable array and find out what type it is
             for (int dvi = 0; dvi < dataVariables.size(); dvi++) {
                 dataVariableDetails = dataVariables.get(dvi);
                 // if the variable name exists in the current line then process
@@ -122,24 +113,27 @@ public class tcpWorker implements Runnable {
                     String[] dataVariableDetailsArray = dataVariableDetails.split(";");
                     String variableType = dataVariableDetailsArray[1];
                     String variableRules = dataVariableDetailsArray[2];
-                    //System.out.println("variableType: "  + variableType);
-                    //System.out.println("variableRules: "  + variableRules);
-
                     if (variableType.equals("substring")) {
                         // need to get rules for a substring, first and last pos
                         String[] variableRulesArray = variableRules.split(",");
                         int substringStartPos = Integer.parseInt(variableRulesArray[0]);
                         int substringLastPos = Integer.parseInt(variableRulesArray[1]);
-                        // now use the variables to extrat data from input input stream
+                        // now use the variables to extract data from input input stream
                         subStringValue = inputLine.substring(substringStartPos, substringLastPos);
-                        //System.out.println("subStringValue: "  + subStringValue);
                     }
+                    if (variableType.equals("randomNumber")) {
+                        // for randomNumber varibale rules are, 1. min, 2. max and 3. printf format
+                        String[] variableRulesArray = variableRules.split(",");
+                        int min = Integer.parseInt(variableRulesArray[0]);
+                        int max = Integer.parseInt(variableRulesArray[1]);
+                        String format = variableRulesArray[2];
+                        int random_int = (int)Math.floor(Math.random()*(max-min+1)+min);
+                        subStringValue = String.format("%04d", random_int);  // 0009
+                    }
+                    // now replace the tag in the response message with the generated value
                     variableName = "%" + variableName + "%";
                     responseData = responseData.replaceAll(variableName, subStringValue);
-                    //System.out.println("responseData: " + responseData);
-                    //System.out.println("--------------------------");
                 }
-
             }
         }
         return responseData;

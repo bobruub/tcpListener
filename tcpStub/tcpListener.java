@@ -1,6 +1,10 @@
+package tcpStub;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -21,34 +25,41 @@ import javax.json.*;
       static String[] contentCheckRules = null;
       static int contentFirstPos = 0;
       static int contentLastPos = 0;
-
+      static int socketTimeout = 0;
+      static int clientTimeout = 0;
+      static int threadCount = 0;
+      static String ListenerVersion = null;
+      static JsonObject configObject = null;
     public void start(int port) {
         // open the port
         try {
             serverSocket = new ServerSocket(port);
-            serverSocket.setSoTimeout(10000);
+            if (socketTimeout > 0) {                                                // set a timeout for socket connections from config.json a socketTimeout of 0 is forever.
+                serverSocket.setSoTimeout(socketTimeout);
+            }
         } catch (Exception e) {
             System.out.println("tcpListener: error opening port: " + e);
             System.exit(1);
         }
-        ExecutorService executor = Executors.newFixedThreadPool(100);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);        // setup a thread pool for sockets
         while (true) {
-            // establish a client connection
             try {
+                // establish a client connection
                 clientSocket = serverSocket.accept();
-                // set a timeout so threads get cleared automatically
-                clientSocket.setSoTimeout(5 * 1000);
+                if (clientTimeout > 0) {                                            // set a timeout so threads get cleared automatically from config.json a clientTimeout of 0 is forever.
+                    clientSocket.setSoTimeout(clientTimeout);
+                }
             } catch (Exception e) {
                 System.out.println("tcpListener: error opening socket: " + e);
                 System.exit(1);
             }
             // for each input connection start a thread to deal with it
-            Runnable tcpWorker;
-            tcpWorker = new tcpWorker(clientSocket,
+            Runnable tcpWorker = new tcpWorker(clientSocket,
                     contentFirstPos,
                     contentLastPos,
                     result,
-                    dataVariables);
+                    dataVariables,
+                    configObject);
             executor.execute(tcpWorker);
         }
 
@@ -116,9 +127,30 @@ import javax.json.*;
             System.exit(1);
         }
 
-        System.out.println("tcpListener: opening port on 20001.");
+        // load cofig json file
+        fileName = "./data/config.json";
+        System.out.println("tcpListener: opening file: " + fileName);
+        try {
+            InputStream fis = new FileInputStream(fileName);
+            JsonReader reader = Json.createReader(fis);
+            configObject = reader.readObject();
+            reader.close();
+            fis.close();
+            ListenerVersion = configObject.getString("ListenerVersion");
+            socketTimeout = configObject.getInt("socketTimeout");
+            clientTimeout = configObject.getInt("clientTimeout");
+            threadCount = configObject.getInt("threadCount");
+            System.out.println("tcpListener: socketTimeout: " + socketTimeout);
+            System.out.println("tcpListener: clientTimeout: " + clientTimeout);
+            System.out.println("tcpListener: threadCount: " + threadCount);
+        } catch (Exception e) {
+            System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
+            System.exit(1);
+        }
+        System.out.println("tcpListener v"+ListenerVersion+": opening port on 20001.");
         tcpListener server = new tcpListener();
         server.start(20001);
     }
 
 }
+
