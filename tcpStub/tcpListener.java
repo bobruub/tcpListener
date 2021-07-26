@@ -20,7 +20,7 @@ import javax.json.*;
       String greeting;
       String inputLine;
       String outLine;
-      static ArrayList<String> result = new ArrayList<>();
+      static ArrayList<String> incrementNumberArray = new ArrayList<>();
       static ArrayList<String> dataVariables = new ArrayList<>();
       static String[] contentCheckRules = null;
       static int contentFirstPos = 0;
@@ -61,7 +61,8 @@ import javax.json.*;
             Runnable tcpWorker = new tcpWorker(clientSocket,
                                                configObject,
                                                dataVariableObject,
-                                               requestResponseObject);
+                                               requestResponseObject,
+                                                incrementNumberArray);
             executor.execute(tcpWorker);
         }
 
@@ -95,7 +96,30 @@ import javax.json.*;
             System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
             System.exit(1);
         }
-      
+        // load data variables json file
+        fileName = "./data/datavariables.json";
+        System.out.println("tcpListener: opening file: " + fileName);
+        try {
+            InputStream fis = new FileInputStream(fileName);
+            JsonReader reader = Json.createReader(fis);
+            dataVariableObject = reader.readObject();
+            // load default incremented number values in an array.
+            JsonArray variableArray = (JsonArray) dataVariableObject.get("variable");
+            for (int variableCntr = 0; variableCntr < variableArray.size(); variableCntr++) {
+                String arrayVariableName = variableArray.getJsonObject(variableCntr).getString("name");
+                String arrayVariableType = variableArray.getJsonObject(variableCntr).getString("type");
+                if (arrayVariableType.equals("IncrementNumber")){
+                    JsonArray formatArray = (JsonArray) variableArray.getJsonObject(variableCntr).get("format");
+                    String incrementNumberStartValue = formatArray.getJsonObject(0).getString("default");
+                    incrementNumberArray.add(arrayVariableName + ":" + incrementNumberStartValue);
+                }
+            }
+            reader.close();
+            fis.close();
+        } catch (Exception e) {
+            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
+            System.exit(1);
+        }
         // load cofig json file
         fileName = "./data/config.json";
         System.out.println("tcpListener: opening file: " + fileName);
@@ -128,20 +152,7 @@ import javax.json.*;
             System.exit(1);
         }
         
-         // load data variables json file
-        fileName = "./data/datavariables.json";
-        System.out.println("tcpListener: opening file: " + fileName);
-        try {
-            InputStream fis = new FileInputStream(fileName);
-            JsonReader reader = Json.createReader(fis);
-            dataVariableObject = reader.readObject();
-            reader.close();
-            fis.close();
-        } catch (Exception e) {
-            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
-            System.exit(1);
-        }
-        
+
         System.out.println("tcpListener: v"+ListenerVersion+": opening port on " + port + ".");
         tcpListener server = new tcpListener();
         server.start(port);

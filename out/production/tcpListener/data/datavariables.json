@@ -22,12 +22,45 @@
 			]
 		},
 		{
+			"name" : "incNum",
+			"type" : "IncrementNumber",
+			"format" : [
+				{
+					"default" : "0",
+					"format" : "%04d"
+				}
+			]
+		},
+		{
+			"name" : "incNumTwo",
+			"type" : "IncrementNumber",
+			"format" : [
+				{
+					"default" : "10",
+					"format" : "%04d",
+ 				}
+			]
+		},
+		{
+			"name" : "GUID",
+			"type" : "guid"
+		},
+		{
 			"name" : "eventId",
 			"type" : "substring",
 			"format" : [
 				{
 					"startPos" : 7,
 					"endPos" : 10
+				}
+			]
+		},
+		{
+			"name" : "currentTime",
+			"type" : "date",
+			"format" : [
+				{
+					"format" : "HHmmss"
 				}
 			]
 		}

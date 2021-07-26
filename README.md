@@ -16,62 +16,126 @@ tcpStub is a simple general purpose tcp listener which will accept and respond t
 
 ```
 {
-"ListenerVersion": "0.5",
-"socketTimeout": 0,
-"clientTimeout": 0,
-"threadCount": 100
+{
+  "ListenerVersion": "1.0",
+  "socketTimeout": 0,
+  "clientTimeout": 0,
+  "threadCount": 100,
+  "port": 3535,
+  "configCheck": [
+	{
+		"type": "substring",
+		"startPos" : 0,
+		"endPos" : 5
+	}
+  ]
+}
 }
 ```
  - if **socketTimeout** and **clientTimeout** are set to 0 the socket will not timeout, this is normal behaviour
  - **threadcount** is not crtical at low volumes but may need to be tuned if high throughput is required.
-
-## contentcheck.txt
-
-```
-substring;0,5
-```
-
-- Defines the content that is to be extracted from input line for comparison.
-- Only supports substring at this time.
-
+ - **port** port number to listen on.  
+-  **configCheck** defines the content that is to be extracted from input line for comparison.
+    - Only supports substring at this time.
 TODO: 
 - expand to other options
-- move to config.json
 
-## requestresponse.txt
+## requestresponse.json
 
 ```
-DLTBQ;ALTBA%sequenceNumber%%eventId%.....h%randNum%41001402707ITSP05.2501072
-DLTBQ;PCTBA08C1F..... 015641000002603
-RCTBQ;DCTBA08C1F..... 015641035702606HS01102014212000000000050601020304050612WINaPAANNNNNPa1Pda1QTeDSHWaPAANNNNNPa1Pda1QTReDQU aPAANNNNNPPPPPa1Pda1QWeDEX aPAANNNNNPPPPPa1Pda1PXReDTRIaPAANNNNNPPPPPa1Pda1bDSPRaSAANNNNNPPPPPa1Pda1RReDDD aPAANNNNNPPPPPa1Pda1bDDD1aPAANNNNNPPPPPa1Pda1bDOMNaPAANNNNNPPPPPa1Pda1QTeDEQDaCAANNNNNPPPPPa1Pda1QTReDP04aCAANNNNNPPPPPa1Pda1bDP06aCAANNNNNPPPPPa1Pda1ReD3563302
-ACTBQ;RCTBA14C1F..... 015641000002602
-DCTBQ14C1F;ACTBA14C1F..... 015641000002561
-DCTBQ14C1F;DSTBA20C1F01... 015641027202621C022000C161111111111111111..10WINCe@@SHWCe@@QU Ce@@EX Ce@@TRICe@@SPRCe@@DD C02e@@OMNCe@@EQDC020304e@@P06C0203040506e@@10WIN011-16/SHW011-16/QU 011-16/EX 011-16/TRI011-16/SPR011-16/DD 011-16/1-24/OMN011-16/EQD011-16/1-24/1-15/1-18/P06011-16/1-24/1-15/1-18/1-8/1-8/....36137
-ASTBQ20C1F01;RSTBA26C1F01... 015641000002632
-DSTBQ26C1F01;ASTBA26C1F01... 015641000002611
-DSTBQ26C1F01;endOfStream
+{
+	"response" : [
+		{
+			"name" : "DLTBQ",
+			"response" : "ALTBA%sequenceNumber%%eventId%.....h%currentTime%001402707ITSP05.2501%randNum%"
+		},
+		{
+			"name" : "DLTBQ",
+			"response" : "endOfStream"
+		}
+	]
+}
 ```
 Contains the responses to be sent when a matching contentcheck is found, 
-- needs to be unique per line
+- needs to be unique per input line
 - multiple matches will send multiple responses in sequence of entry in the file
-- final response of a logical seqeunce should be duplicated with **endOfStream** which terminates connection. 
- - variables are defined in each line formatted %variableName% and must have a matching value in the **datavariables.txt** file
+- the final response of a logical seqeunce should be duplicated with **endOfStream** which terminates connection. 
+ - variables are defined in each line formatted %variableName% and must have a matching value in the **datavariables.json** file
 
-## datavariables.txt
+## datavariables.json
 
 ```
-sequenceNumber;substring;5,7
-eventId;substring;7,10
-randNum;randomNumber;0,100,%04d
+{
+	"variable": [
+		{
+			"name" : "sequenceNumber",
+			"type" : "substring",
+			"format" : [
+				{
+					"startPos" : 5,
+					"endPos" : 7
+				}
+			]
+		},
+		{
+			"name" : "randNum",
+			"type" : "randomNumber",
+			"format" : [
+				{
+					"min" : 0,
+					"max" : 100,
+					"format" : "%04d"
+				}
+			]
+		},
+		{
+			"name" : "eventId",
+			"type" : "substring",
+			"format" : [
+				{
+					"startPos" : 7,
+					"endPos" : 10
+				}
+			]
+		},
+		{
+			"name" : "currentTime",
+			"type" : "date",
+			"format" : [
+				{
+					"format" : "HHmmss"
+				}
+			]
+		},
+		{
+			"name" : "GUID",
+			"type" : "guid"
+		},
+		{
+			"name" : "incNum",
+			"type" : "IncrementNumber",
+			"format" : [
+				{
+					"default" : "0",
+					"format" : "%04d"
+				}
+			]
+		}
+	]
+}
 ```
 
-- Each named variable (column 1) will match one defined in **requestresponse.txt**
+- Each variable **name** may match one defined in **requestresponse.json**
+- **type** defines the type of variable required
+- **format** defines the format of the variable type  
 
-Column 2 defines the type of the variable 
-- Substring - extract variable from input line based on rules (column 3): First Pos, LastPos
-- randomNumber - generate a random number based on rules (column 3): Min, Max, Format  
+**Support**
+- **substring** - extracts from input line based on format: startPos and endPos 
+- **randomNumber** - generate a random number based on format: Min, Max and output format
+- **date** - generate current date based on format: date format.
+- **IncrementNumber** an incrementing number based on format: number format
+- **guid** a guid
 
 TODO:
 
-- convert to json
-
+- expand number of types.

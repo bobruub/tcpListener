@@ -2,11 +2,11 @@
 	"response" : [
 		{
 			"name" : "DLTBQ",
-			"response" : "ALTBA%sequenceNumber%%eventId%.....h015641001402707ITSP05.2501%randNum%"
+			"response" : "ALTBA%sequenceNumber%%eventId%.....h%currentTime%001402707ITSP05.2501%randNum%_%incNum%_%incNumTwo%_%GUID%"
 		},
 		{
 			"name" : "DLTBQ",
-			"response" : "PCTBA08C1F..... 015641000002603"
+			"response" : "PCTBA08C1F..... 015641000002603_%incNum%_%incNumTwo%_%GUID%"
 		},
 		{
 			"name" : "RCTBQ",

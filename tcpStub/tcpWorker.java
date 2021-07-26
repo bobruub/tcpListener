@@ -5,9 +5,10 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Random;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import javax.json.*;
+import java.util.Date.*;
 
 public class tcpWorker implements Runnable {
   
@@ -15,21 +16,26 @@ public class tcpWorker implements Runnable {
   private final JsonObject configObject;
   private final JsonObject dataVariableObject;
   private final JsonObject requestResponseObject;
+  private final ArrayList<String> incrementNumberArray;
   private final int contentFirstPos;
   private final int contentLastPos;
-  
+  private final String contentDataFormat;
+
   public tcpWorker(Socket clientSocket,
                    JsonObject configObject,
                    JsonObject dataVariableObject,
-                   JsonObject requestResponseObject) {
+                   JsonObject requestResponseObject,
+                   ArrayList incrementNumberArray) {
     
     this.clientSocket = clientSocket;
     JsonArray configArray = (JsonArray) configObject.get("configCheck");
     this.contentFirstPos = configArray.getJsonObject(0).getInt("startPos");
     this.contentLastPos = configArray.getJsonObject(0).getInt("endPos");
+    this.contentDataFormat = configArray.getJsonObject(0).getString("dataFormat");
     this.configObject = configObject;
     this.dataVariableObject = dataVariableObject;
     this.requestResponseObject = requestResponseObject;
+    this.incrementNumberArray = incrementNumberArray;
     
   }
   @Override
@@ -54,6 +60,9 @@ public class tcpWorker implements Runnable {
       while (connectionOpen) {
         String inputLine;
         inputLine = in.readLine();                                              // read input line from socket
+        if (contentDataFormat.toUpperCase().equals("HEX")){
+
+        }
         cntr++;
         System.out.println(cntr + ":" + inputLine);
         contentCheck = inputLine.substring(contentFirstPos, contentLastPos);    // extract contentCheck indentifier from input message
@@ -95,39 +104,68 @@ public class tcpWorker implements Runnable {
     String subStringValue = null;
     // extract the variablename from the inptut stream %varname%
     while (true) {
+
       int firstPos = responseData.indexOf("%");
       int lastPos = responseData.indexOf("%", firstPos + 1);
+
       // if indexof finds no more messages then stop processing.
       if (firstPos < 0) {
         break;
       }
+
       String variableName = responseData.substring(firstPos + 1, lastPos);
-      // now we've got the variable name, lets loop though variable array and find out what type it is
+      // now we've got the variable name, lets loop though variable array and see if we can find a match
       JsonArray variableArray = (JsonArray) dataVariableObject.get("variable");
+
       for (int variableCntr = 0; variableCntr < variableArray.size(); variableCntr++) {
         String arrayVariableName = getVariableName(variableArray, variableCntr);
+
         if (arrayVariableName.equals(variableName)){
-          // now get the type of the variable
+          // we've found a match so now get the type of the variable
           String arrayVariableType = getVariableType(variableArray, variableCntr);
           // extract all the format detail for the variable
           JsonArray formatArray = getFormatArray(variableArray, variableCntr);
+
+          // based on the variable type process it  here...
           if (arrayVariableType.equals("substring")){
             int formatStartPos = getStartPos(formatArray);
             int formatEndPos = getEndPos(formatArray);
             subStringValue = inputLine.substring(formatStartPos, formatEndPos);
-          }
-          if (arrayVariableType.equals("randomNumber")) {
+          } else if (arrayVariableType.equals("randomNumber")) {
             int formatMin = getMin(formatArray);;
             int formatMax = getMax(formatArray);;
             String formatFormat = getFormat(formatArray);;
             int random_int = (int)Math.floor(Math.random()*(formatMax-formatMin+1)+formatMin);
-            subStringValue = String.format("%04d", random_int);  // 0009
+            subStringValue = String.format(formatFormat, random_int);  // 0009
+          } else if (arrayVariableType.equals("date")) {
+            String dateFormat = getFormat(formatArray);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(dateFormat);
+            String currentTime = simpleDateFormat.format(new Date());
+            subStringValue = currentTime;
+          } else if (arrayVariableType.equals("guid")) {
+            UUID randomUUID = UUID.randomUUID();
+            subStringValue = randomUUID.toString();
+          } else if (arrayVariableType.equals("IncrementNumber")) {
+            String numberFormat = getFormat(formatArray);
+            int incrementItemValue = 0;
+            for (int i = 0; i < incrementNumberArray.size(); i++){
+                String[] incrementItem = incrementNumberArray.get(i).split(":");      // split the array
+                if (incrementItem[0].equals(variableName)){                                 // if current array name matches current variablename
+                  incrementItemValue = Integer.parseInt(incrementItem[1]);                  // extract the number from array
+                  incrementItemValue++;                                                     // increment the number
+                  incrementNumberArray.set(i,variableName + ":" + incrementItemValue);      // update the number to array
+                  break;
+                }
+            }
+            subStringValue = String.format(numberFormat, incrementItemValue);
           }
         }
       }
+
       variableName = "%" + variableName + "%";
       responseData = responseData.replaceAll(variableName, subStringValue);
     }
+
     return responseData;
   }
   
