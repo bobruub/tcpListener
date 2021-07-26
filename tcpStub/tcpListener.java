@@ -28,9 +28,13 @@ import javax.json.*;
       static int socketTimeout = 0;
       static int clientTimeout = 0;
       static int threadCount = 0;
+      static int port = 0;
       static String ListenerVersion = null;
       static JsonObject configObject = null;
-    public void start(int port) {
+      static JsonObject requestResponseObject = null;
+      static JsonObject dataVariableObject = null;  
+    
+      public void start(int port) {
         // open the port
         try {
             serverSocket = new ServerSocket(port);
@@ -55,11 +59,9 @@ import javax.json.*;
             }
             // for each input connection start a thread to deal with it
             Runnable tcpWorker = new tcpWorker(clientSocket,
-                    contentFirstPos,
-                    contentLastPos,
-                    result,
-                    dataVariables,
-                    configObject);
+                                               configObject,
+                                               dataVariableObject,
+                                               requestResponseObject);
             executor.execute(tcpWorker);
         }
 
@@ -79,54 +81,21 @@ import javax.json.*;
 
     public static void main(String[] args) throws Exception {
 
-        // load request and response data into an array
-        String fileName = "./data/requestresponse.txt";
+// load request and responses in json file.
+        String fileName = "./data/requestresponse.json";
         System.out.println("tcpListener: opening file: " + fileName);
         try {
-            BufferedReader br = new BufferedReader(new FileReader(fileName));
-            while (br.ready()) {
-                result.add(br.readLine());
-            }
-            br.close();
+            InputStream fis = new FileInputStream(fileName);
+            JsonReader reader = Json.createReader(fis);
+            requestResponseObject = reader.readObject();
+            JsonArray  responseArray = (JsonArray) requestResponseObject.get("response");
+            reader.close();
+            fis.close();
         } catch (Exception e) {
-            System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
+            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
             System.exit(1);
         }
-
-        // load data variables into an array
-        fileName = "./data/datavariables.txt";
-        System.out.println("tcpListener: opening file: " + fileName);
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(fileName));
-            while (br.ready()) {
-                dataVariables.add(br.readLine());
-            }
-            br.close();
-        } catch (Exception e) {
-            System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
-            System.exit(1);
-        }
-
-// load the content check descriptor into memory
-        fileName = "./data/contentcheck.txt";
-        System.out.println("tcpListener: opening file: " + fileName);
-        String contentCheckType = null;
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(fileName));
-            String[] contentCheckArray = br.readLine().split(";");
-            contentCheckType = contentCheckArray[0];
-            contentCheckRules = contentCheckArray[1].split(",");
-            contentFirstPos = Integer.parseInt(contentCheckRules[0]);
-            contentLastPos = Integer.parseInt(contentCheckRules[1]);
-            System.out.println("tcpListener: contentCheckType: " + contentCheckType +
-                    " - Start Position: " + contentFirstPos +
-                    " - End Position: " + contentLastPos);
-            br.close();
-        } catch (Exception e) {
-            System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
-            System.exit(1);
-        }
-
+      
         // load cofig json file
         fileName = "./data/config.json";
         System.out.println("tcpListener: opening file: " + fileName);
@@ -140,16 +109,42 @@ import javax.json.*;
             socketTimeout = configObject.getInt("socketTimeout");
             clientTimeout = configObject.getInt("clientTimeout");
             threadCount = configObject.getInt("threadCount");
+            port = configObject.getInt("port");
+            // get the config check type and format
+            JsonArray configArray = (JsonArray) configObject.get("configCheck");
+            String contentCheckType = configArray.getJsonObject(0).getString("type");
+            contentFirstPos = configArray.getJsonObject(0).getInt("startPos");
+            contentLastPos = configArray.getJsonObject(0).getInt("endPos");
+           
+            System.out.println("tcpListener: contentCheckType: " + contentCheckType +
+                    " - Start Position: " + contentFirstPos +
+                    " - End Position: " + contentLastPos);
             System.out.println("tcpListener: socketTimeout: " + socketTimeout);
             System.out.println("tcpListener: clientTimeout: " + clientTimeout);
             System.out.println("tcpListener: threadCount: " + threadCount);
+            
         } catch (Exception e) {
-            System.out.println("tcpListener: error opening file: " + fileName + "..." + e);
+            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
             System.exit(1);
         }
-        System.out.println("tcpListener v"+ListenerVersion+": opening port on 20001.");
+        
+         // load data variables json file
+        fileName = "./data/datavariables.json";
+        System.out.println("tcpListener: opening file: " + fileName);
+        try {
+            InputStream fis = new FileInputStream(fileName);
+            JsonReader reader = Json.createReader(fis);
+            dataVariableObject = reader.readObject();
+            reader.close();
+            fis.close();
+        } catch (Exception e) {
+            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
+            System.exit(1);
+        }
+        
+        System.out.println("tcpListener: v"+ListenerVersion+": opening port on " + port + ".");
         tcpListener server = new tcpListener();
-        server.start(20001);
+        server.start(port);
     }
 
 }
