@@ -1,0 +1,35 @@
+{
+	"variable": [
+		{
+			"name" : "sequenceNumber",
+			"type" : "substring",
+			"format" : [
+				{
+					"startPos" : 5,
+					"endPos" : 7
+				}
+			]
+		},
+		{
+			"name" : "randNum",
+			"type" : "randomNumber",
+			"format" : [
+				{
+					"min" : 0,
+					"max" : 100,
+					"format" : "%04d"
+				}
+			]
+		},
+		{
+			"name" : "eventId",
+			"type" : "substring",
+			"format" : [
+				{
+					"startPos" : 7,
+					"endPos" : 10
+				}
+			]
+		}
+	]
+}
