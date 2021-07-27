@@ -168,6 +168,7 @@ public class tcpWorker implements Runnable {
 
     return responseData;
   }
+  //
   
   String getVariableName(JsonArray  variableArray, int variableCntr ){
     return variableArray.getJsonObject(variableCntr).getString("name");
