@@ -62,7 +62,7 @@ import javax.json.*;
                                                configObject,
                                                dataVariableObject,
                                                requestResponseObject,
-                                                incrementNumberArray);
+                                               incrementNumberArray);
             executor.execute(tcpWorker);
         }
 
@@ -117,7 +117,7 @@ import javax.json.*;
             reader.close();
             fis.close();
         } catch (Exception e) {
-            System.out.println("tcpListener: error processing file: " + fileName + "..." + e);
+            System.out.println("tcpListener: error processing file: " + fileName + "... " + e);
             System.exit(1);
         }
         // load cofig json file
