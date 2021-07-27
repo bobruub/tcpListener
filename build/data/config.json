@@ -8,7 +8,8 @@
 	{
 		"type": "substring",
 		"startPos" : 0,
-		"endPos" : 5
+		"endPos" : 5,
+        "dataFormat": "text"
 	}
   ]
 }
