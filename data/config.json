@@ -5,10 +5,11 @@
   "threadCount": 100,
   "port": 3535,
   "configCheck": [
-	{
-		"type": "substring",
-		"startPos" : 0,
-		"endPos" : 5
-	}
+    {
+      "type": "substring",
+      "startPos" : 0,
+      "endPos" : 5,
+      "dataFormat": "text"
+    }
   ]
 }
